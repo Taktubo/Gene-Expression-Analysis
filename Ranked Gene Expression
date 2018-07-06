@@ -1,0 +1,37 @@
+#Create a ranked list of gene by expression.
+#This funtction will return three files:
+#   The first is a txt file of the ranked list of genes
+#   The second is a txt file of the ranked list of genes including the logFC, logCPM, PValues, and FDR values
+#   Last is a csv file of the ranked list of genes with logFC, logCPM, PValues, and FDR values
+#Both outputs will go to the same directory as the original file unless otherwise specified.
+
+setwd("C:/Users/Administrator.WIN-H07M58SBKE2/Desktop")
+
+########################################################################################################################################
+
+#Paste the name of your file here
+file_name <- "Old Data Set (Testing)"
+
+########################################################################################################################################
+
+
+#Read in data into a data frame
+data4 <- read.delim(paste(file_name, ".txt", sep = ""), sep="\t", header=T, row.names=1)
+
+sorted_data <- data4[order(-data4$logFC),]
+
+#If you would like a descending list, comment out the previous line and activate the next line by removing the "#"
+
+#sorted_data <- data4[order(data3$logFC),]
+
+if (sorted_data$logFC[1] > sorted_data$logFC[2]){
+  write.table(sorted_data, paste(file_name, "Descending.txt", sep = ""), quote = FALSE, sep = "\t\t")
+  write.csv(sorted_data, paste(file_name, "Descending.csv", sep = " "))
+  
+  write.table(rownames(sorted_data), paste(file_name, "Descending Genes Only.txt", sep = ""), quote = FALSE, sep = "\t\t", row.names = FALSE, col.names = FALSE)
+  }else{
+  write.table(sorted_data, paste(file_name, "Ascending.txt", sep = ""), quote = FALSE, sep = "\t\t")
+  write.csv(sorted_data, paste(file_name, "Ascending.csv", sep = " "))
+  
+  write.table(rownames(sorted_data), paste(file_name, "Ascending Genes Only.txt", sep = ""), quote = FALSE, sep = "\t\t", row.names = FALSE, col.names = FALSE)
+  }
