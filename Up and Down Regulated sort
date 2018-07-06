@@ -1,0 +1,106 @@
+#Set working directory to find my input file with Gene ID (unlabeled columb), log Fold count, log counts per million, P-Values, and false
+#discovery rate
+
+#Will be the same code or any set of data that can also be input into DAVID as a .txt file with log fold count, 
+#log count per million, p-values, and false discovery rates.
+#In order to work or your file, you must change the working directory and the file name. Mine was "Old Data Set (Testing).txt" and was 
+#located on my desktop.
+
+#Program is meant to evaluate and reorganize data with log fold count, log count per million, p-values, and false discovery rates
+#Gene names will be returned in the same format as they were on the original file and not changed into diferent annotations.
+#The outputs will be in the same directory as the original file unless directed otherwise.
+
+
+setwd("C:/Users/Administrator.WIN-H07M58SBKE2/Desktop")
+
+########################################################################################################################################
+
+#Paste the name of your file here
+file_name <- "Old Data Set (Testing)"
+
+########################################################################################################################################
+
+
+#Read in data into a data frame
+data3 <- read.delim(paste(file_name, ".txt", sep = ""), sep="\t", header=T, row.names=1)
+
+#Separates the data in each columb into an object of their own for a data manipulation and analysis
+
+  #Makes a list of Gene ID's
+Official_Gene_ID <- rownames(data3)
+
+  #Makes a list of "fold count" values
+log_FC <- data3$logFC
+
+  #Makes a list of "counts per million values
+log_CPM <- data3$logCPM
+
+  #Makes a list of p-values
+P_Values <- data3$PValue
+
+  #Makes a list of fdr values
+false_discovery_rate <- data3$FDR
+
+Upregulated_Genes <- function(Official_Gene_ID, log_FC, log_CPM, P_Values, false_discovery_rate){
+  
+  #Initiallize vectors
+  genes_names <- numeric()
+  logFC <- numeric()
+  logCPM <- numeric()
+  PValues <- numeric()
+  FDR <- numeric()
+    
+
+  for (expression in 1:length(log_FC)){
+    if (log_FC[expression] >= 0){
+      genes_names <- c(genes_names, Official_Gene_ID[expression])
+      logFC <- c(logFC, log_FC[expression])
+      logCPM <- c(logCPM, log_CPM[expression])
+      PValues <- c(PValues, P_Values[expression])
+      FDR <- c(FDR, false_discovery_rate[expression])
+    }
+  }
+  up_genes <- data.frame(cbind(logFC, logCPM, PValues, FDR))
+  row.names(up_genes) <- genes_names
+
+  return (up_genes)
+} 
+
+
+Downregulated_Genes <- function(Official_Gene_ID, log_FC, log_CPM, P_Values, false_discovery_rate){
+  
+  genes_names <- numeric()
+  logFC <- numeric()
+  logCPM <- numeric()
+  PValues <- numeric()
+  FDR <- numeric()
+  
+  
+  for (expression in 1:length(log_FC)){
+    if (log_FC[expression] < 0){
+      genes_names <- c(genes_names, Official_Gene_ID[expression])
+      logFC <- c(logFC, log_FC[expression])
+      logCPM <- c(logCPM, log_CPM[expression])
+      PValues <- c(PValues, P_Values[expression])
+      FDR <- c(FDR, false_discovery_rate[expression])
+    }
+  }
+  dwn_genes <- data.frame(cbind(logFC, logCPM, PValues, FDR))
+  row.names(dwn_genes) <- genes_names
+  
+  return(dwn_genes)
+}
+
+
+
+
+
+
+UP_GENES <- data.frame(Upregulated_Genes(Official_Gene_ID, log_FC, log_CPM, P_Values, false_discovery_rate))
+DWN_GENES <- data.frame(Downregulated_Genes(Official_Gene_ID, log_FC, log_CPM, P_Values, false_discovery_rate))
+
+write.csv(UP_GENES, paste(file_name, "Upregulated.csv", sep = " "))
+write.table(UP_GENES, paste(file_name, "Upregulated.txt", sep = ""), quote = FALSE, sep = "\t\t")
+
+write.csv(DWN_GENES, paste(file_name, "Downregulated.csv", sep = " "))
+write.table(UP_GENES, paste(file_name, "Downregulated.txt", sep = ""), quote = FALSE, sep = "\t\t")
