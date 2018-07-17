@@ -1,14 +1,13 @@
 # List can be used as a direct input for GO analysis (can use original list for a background)
 
-# In order to work or your file, you must change the working directory (line 53) and the file name (line 58).
-# Must change the output directory (line 71).
-# Fold Count threshold can be changed. The default is |FCTh| >= 1.5 (line 23 within the function definition) 
-# False Discovery Rate threshold can be changed. The default is FDRTh < 0.05 (line 23 within the function definition)
+# In order to work or your file, you must change the working directory (line 17) and the output directory(line 19).
+# Must change the list of file names (line 21).
+# Delete function automatically deletes rows containing any NA values. n = "number of allowed NA values" (line 29)
+# Fold Count threshold can be changed. The default is |FCTh| >= 1.5 (line 36 within the function definition) 
+# False Discovery Rate threshold can be changed. The default is FDRTh < 0.05 (line 36 within the function definition)
 
-# Program is meant to evaluate and reorganize data with log fold count, log count per million, p-values, and false discovery rates additional 
-# categories, by column, can be added (lines 75-93)
-# Final return is a complete list of enriched genes, upregulated and downregulated, sorted in a descending list by log Fold Change
-# Gene names will be returned in the same format as they were on the original file and not changed into diferent annotations.
+# Program is meant to evaluate and reorganize data with log fold count, log count per million, p-values, and false discovery rates 
+# additional categories, by column, can be added (lines 75-87)
 
 ########################################################################################################################################
 ##########################################################User Input####################################################################
