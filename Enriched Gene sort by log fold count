@@ -87,7 +87,7 @@ Multi_sort <- function(input_directory, output_directory, file_name, Enriched_Ge
     ENRICHED_GENES <- Enriched_Genes(Official_Gene_ID, log_FC, P_Values, false_discovery_rate, BaseMean, Stat)
     
     #Writes data to a csv (excel) file. If a .txt file is needed then uncomment line 102
-    write.csv(ENRICHED_GENES, paste(file_name[file], " Enriched.csv", sep = " "))
+    write.csv(ENRICHED_GENES, paste(file_name[file], " Enriched.csv", sep = " "), quote = FALSE)
     #write.table(ENRICHED_GENES, paste(file_name[file], "Enriched.txt", sep = ""), quote = FALSE, sep = "\t\t")
   }
 }
