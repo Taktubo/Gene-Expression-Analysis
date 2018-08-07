@@ -1,0 +1,171 @@
+# This code is meant to combine and analyze the Bioloical Process (BP) and Molecular Function (MF) Genetic Ontology Terms from DAVID 
+# Bioinformatic Resource of two experimental sequence analises and return the shared and unique terms of each in a txt file.
+
+# IMPORTANT: the overlap column of a csv file will be in an unreadable format if opened with excel because of microsoft
+# office processing so the final gene lists are in text file format.
+
+########################################################################################################################################
+######################################################### User Input ###################################################################
+########################################################################################################################################
+
+input_directory <- ""                                                                            # directory of input GO term ".txt" files
+
+text_output_directory <- ""                                                                      # desired output directory
+
+vis_output_directory <- ""                                                                       # Visual output directory (if different from normal output)
+setwd(input_directory)
+
+# Enter the files you plan to compare here as denoted by the names of the vectors
+# If using a list with BP and MF terms segregated then refer to the "Enrichr-based GOT Enrichment Assay."
+
+Upregulated_1D <- c("")             
+Downregulated_1D <- c("")
+
+Upregulated_2D <- c("")
+Downregulated_2D <- c("")
+
+# Add a general name of the experiments for the naming of the files
+
+df2 <- ""
+df1 <- ""
+
+# Set a Threshold for P-values and FDR. The default is < 0.05 for both.
+
+PTh = 0.05
+FDRTh = 0.05
+
+library(Hmisc)
+library(VennDiagram)
+########################################################################################################################################
+######################################################### Functions ####################################################################
+########################################################################################################################################
+
+# Eliminates all GO terms that do not satisfy the thresholds for p-value (PTh; default <0.05) and false-discovery-rate (FDRTh, default < 0.05)
+# And returns a data frame which only harbors statistically significant, David derrived GO terms
+
+batch.correction <- function(name_of_1_df, PTh = 0.05, FDRTh = 0.05){
+  BP <- read.delim(paste(name_of_1_df, ".txt", sep = ""), sep="\t", header = T)               # reads in David formatted ".txt" file
+  return(BP[which(BP$PValue < PTh & BP$FDR < FDRTh),])                                        # Returns only the rows with p-values below the set
+                                                                                              # the set p-value threshold (PTh; default = 0.05),
+                                                                                              # and also below the given false-discovery-rate 
+                                                                                              # threshold (FDRh; default = 0.05).
+}
+
+# The compare fuction takes 2 data frames, 2 names for each data rame, and a string for the type of regulation (Up or Down) and returns the 
+# 1. A text and csv file of the batch corrected (statistically significant) Go terms
+# 2. A text file of the enriched genes unique to data frame 1 from data frame 2
+# 3. A text file of the enriched genes unique to data frame 2 from data frame 1
+# 4. A text file of the enriched genes in common between data frame 1 and data frame 2
+
+compare <- function(df1, df2, name_df1, name_df2, type_regulation){
+  
+  GL_1 <- unique(do.call(c,(strsplit(as.character(df1$Genes), split = ","))))                 # Retrieves the genes for all GO terms in data frame 1
+  GL_2 <- unique(do.call(c,(strsplit(as.character(df2$Genes), split = ","))))                 # Retrieves the genes for all GO terms in data frame 2
+  
+  df1$Genes <- gsub(",", ";", df1$Genes)                                                      # Replaces the "commas" in the "Genes" column with "semicolons"
+  df2$Genes <- gsub(",", ";", df2$Genes)                                                      # for propper formatting within the csv file.
+  
+  write.table(df1, paste(type_regulation, "_BC_GO ", name_df1, ".txt", sep = ""), quote = FALSE, row.names = FALSE)
+  write.table(df2, paste(type_regulation, "_BC_GO ",name_df2, ".txt", sep = ""), quote = FALSE, row.names = FALSE)
+  
+  write.csv(df1, paste(type_regulation, "_BC_GO ",name_df1, ".csv", sep = ""), quote = FALSE, row.names = FALSE)
+  write.csv(df2, paste(type_regulation, "_BC_GO ",name_df2, ".csv", sep = ""), quote = FALSE, row.names = FALSE)
+  
+  
+  unique_up1 <- GL_1[which(GL_1 %nin% GL_2)]                                                  # assigns a data frame of the unique genes in df1 from df2
+  
+  unique_up2 <- GL_2[which(GL_2 %nin% GL_1)]                                                  # assigns a data frame of the unique genes in df2 from df1
+  
+  shared <- GL_1[which(GL_1 %in% GL_2)]                                                       # assigns a data frame of the shared genes in both df1 and df2
+  
+  write.table(unique_up1, paste(type_regulation, "_UGL", name_df1, " Against ", name_df2, ".txt", sep = ""), quote = FALSE, row.names = FALSE)
+  write.table(unique_up2, paste(type_regulation, "_UGL ", name_df2, " Agaisnt ", name_df1, ".txt", sep = ""), quote = FALSE, row.names = FALSE)
+  write.table(shared, paste(type_regulation, "_ShGL", name_df1, "_", name_df2, ".txt", sep = ""), quote = FALSE, row.names = FALSE)
+  
+}
+# Additional functions to segregate individual gene analysis
+# Will return a the list of unique genes in one data frame of enriched genes when compared with a second
+
+Unique_Genes <- function(df1, df2){
+  
+  GL_1 <- unique(do.call(c,(strsplit(as.character(df1$Genes), split = ","))))       # Retrieves the unique genes of the first data frame
+  GL_2 <- unique(do.call(c,(strsplit(as.character(df2$Genes), split = ","))))       # Retrieves the unique genes of the second data frame
+  
+  return(GL_1[which(GL_1 %nin% GL_2)])                                              # Returns the unique list of gene names in data frame 1
+}
+# Returns the genes that two data frames have in common
+Shared_Genes <- function(df1, df2){
+  
+  GL_1 <- unique(do.call(c,(strsplit(as.character(df1$Genes), split = ","))))       # Retrieves the unique genes of the first data frame
+  GL_2 <- unique(do.call(c,(strsplit(as.character(df2$Genes), split = ","))))       # Retrienves the unique genes of the second data frame 
+  
+  return(GL_1[which(GL_1 %in% GL_2)])                                               # Returns the genes that both data frames have in common
+}
+
+########################################################################################################################################
+####################################################### Working Program ################################################################
+########################################################################################################################################
+
+CGOT_UP1 <- batch.correction(Upregulated_1D, PTh)
+CGOT_DWN1 <- batch.correction(Downregulated_1D, PTh)
+
+CGOT_UP2 <- batch.correction(Upregulated_2D, PTh)
+CGOT_DWN2 <- batch.correction(Downregulated_2D, PTh)
+
+setwd(text_output_directory)                                                # Changes the directory for desired output location
+
+
+compare(CGOT_UP1, CGOT_UP2, df1, df2, "Up")                                 # Uses the compare function on the Uregulated genes
+compare(CGOT_DWN1, CGOT_DWN2, df1, df2, "Dwn")                              # Uses the compare function on the Downregulated genes
+
+########################################################################################################################################
+####################################################### Graphing (Venn) ################################################################
+########################################################################################################################################
+
+setwd(vis_output_directory)
+require(gridExtra)
+
+# Graph function for a simple Venn Diagram to depict the number of genes in each comparison.
+# Upregulation Plot
+# venn.plot <- draw.pairwise.venn(length(unique(do.call(c,(strsplit(as.character(CGOT_UP1$Genes), split = ","))))), 
+                                length(unique(do.call(c,(strsplit(as.character(CGOT_UP2$Genes), split = ","))))), 
+                                length(Shared_Genes(CGOT_UP1, CGOT_UP2)),
+                                c("0401", "0402"),                          # Change the labels of the circles
+                                euler.d = FALSE,
+                                scaled = FALSE, 
+                                ext.text = TRUE,
+                                lwd = c(1, 1),                              # Change the width of the circumference line of the circles
+                                col = c("blue", "red"),                     # Changes the colors of the circumference line
+                                fill = c("blue", "white"),                  # Changes the colors that fill each circle
+                                cex = c(2,2,2),                             # Changes the size of the circle values
+                                fontface = c(1,1,1),                        # changes the font of the circle values
+                                cat.pos = c(-45, 45),                       # Changes the position of the circle labels by degrees
+                                cat.cex = c(2, 2),                          # Changes the font size of the circle labels
+                                cat.fontface = c(2, 2)                      # Changes the font of the circle labels
+)
+
+# Down regulated plot
+
+# venn.plot <- draw.pairwise.venn(length(unique(do.call(c,(strsplit(as.character(CGOT_DWN1$Genes), split = ","))))), 
+                                length(unique(do.call(c,(strsplit(as.character(CGOT_DWN2$Genes), split = ","))))), 
+                                length(Shared_Genes(CGOT_DWN1, CGOT_DWN2)),
+                                c("0401", "0402"),
+                                euler.d = FALSE,
+                                scaled = FALSE,
+                                ext.text = TRUE,
+                                lwd = c(1, 1),
+                                col = c("blue", "red"),
+                                fill = c("blue", "white"),
+                                cex = c(2,2,2),
+                                fontface = c(1,1,1),
+                                cat.pos = c(-45, 45),
+                                cat.cex = c(2, 2),
+                                cat.fontface = c(2, 2)
+)
+
+grid.arrange(gTree(children = venn.plot), top = "Downregulated IFNy vs PBS", bottom = "p < 0.05 \n FDR < 0.05 \n David")
+
+
+grid.newpage()                                                              # Clears your current queried plot and creates a new page
+
+
