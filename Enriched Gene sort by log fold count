@@ -1,24 +1,28 @@
 # List can be used as a direct input for GO analysis (can use original list for a background)
 
-# In order to work or your file, you must change the working directory (line 17) and the output directory(line 19).
-# Must change the list of file names (line 21).
-# Delete function automatically deletes rows containing any NA values. n = "number of allowed NA values" (line 29)
-# Fold Count threshold can be changed. The default is |FCTh| >= 1.5 (line 36 within the function definition) 
-# False Discovery Rate threshold can be changed. The default is FDRTh < 0.05 (line 36 within the function definition)
+# In order to work or your file, you must change the working directory (line 53) and the file name (line 58).
+# Must change the output directory (line 71).
+# Fold Count threshold can be changed. The default is |FCTh| >= 1.5 (line 23 within the function definition) 
+# False Discovery Rate threshold can be changed. The default is FDRTh < 0.05 (line 23 within the function definition)
 
-# Program is meant to evaluate and reorganize data with log fold count, log count per million, p-values, and false discovery rates 
-# additional categories, by column, can be added (lines 75-87)
+# Program is meant to evaluate and reorganize data with log fold count, log count per million, p-values, and false discovery rates additional 
+# categories, by column, can be added (lines 75-93)
+# Final return is a complete list of enriched genes, upregulated and downregulated, sorted in a descending list by log Fold Change
+# Gene names will be returned in the same format as they were on the original file and not changed into diferent annotations.
+
+# Must review list of genes for up and down regulation, and duplicate and pseudo gene removal in the next program
 
 ########################################################################################################################################
 ##########################################################User Input####################################################################
 ########################################################################################################################################
 
-input_directory <- "Your input file path"
+input_directory <- "~/Generic code/Vincent's M1 Polarization Project/Raw RNA Seq data"
 
-output_directory <- "Your desired output file path"
+output_directory <- "~/Generic code/Vincent's M1 Polarization Project/Differential Enrichment"
 
-file_name <- c("Sequence Data 1", "Sequence Data 2", "Sequence Data 3", "Sequence Data 4")
+file_name <- c("deSeq2_0402+IL-4 vs PBS", "deSeq2_0402+IFNy vs PBS", "deSeq2_0401+IL-4 vs PBS", "deSeq2_0401+IFNy vs PBS")
 
+########################################################################################################################################
 ########################################################################################################################################
 ###########################################################Functions####################################################################
 ########################################################################################################################################
@@ -32,7 +36,7 @@ delete_na <- function(DF, n=0) {
 # Returns a dataframe of enriched genes above the specified "Fold Count Threshod" (FCTh), defaut |FCTh| = 1.5, and "False Discovery 
 # Rate Threshold" (FDRTh), default: FDRTh = 0.05 and sorted by descending logFC values.
 
-Enriched_Genes <- function(Official_Gene_ID, log_FC, P_Values, false_discovery_rate, BaseMean, Stat, FCTh = 1.5, FDRTh = 0.05){
+Enriched_Genes <- function(Official_Gene_ID, log_FC, P_Values, false_discovery_rate, log2foldchange = 0, BaseMean, Stat, FCTh = 1.5, FDRTh = 0.05){
   
   genes_names <- numeric()                                                            # Initialize vectors to accept gene list data
   logFC <- numeric()
@@ -40,19 +44,20 @@ Enriched_Genes <- function(Official_Gene_ID, log_FC, P_Values, false_discovery_r
   FDR <- numeric()
   baseMean <- numeric()
   stat <- numeric()
-  
+  log2FoldChange <- numeric()
   
   for (expression in 1:length(log_FC)){
-    if (abs(log_FC[expression]) >= FCTh & false_discovery_rate[expression] < FDRTh){
+    if ((log_FC[expression] >= FCTh | log_FC[expression] <= 1/FCTh) & false_discovery_rate[expression] < FDRTh){
       genes_names <- c(genes_names, Official_Gene_ID[expression])                     #Concantenates data in qualifying rows to corresponding vectors
       logFC <- c(logFC, log_FC[expression])
       PValues <- c(PValues, P_Values[expression])
       FDR <- c(FDR, false_discovery_rate[expression])
+      log2FoldChange <- c(log2FoldChange, log2foldchange[expression])
       baseMean <- c(baseMean, BaseMean[expression])
       stat <- c(stat, Stat[expression])
     }
   }
-  enriched_genes <- data.frame(cbind(logFC, PValues, FDR, baseMean, stat))            # Creates a matrix by column binding the different vectors of 
+  enriched_genes <- data.frame(cbind(log2FoldChange, logFC, PValues, FDR, baseMean, stat))            # Creates a matrix by column binding the different vectors of 
   row.names(enriched_genes) <- genes_names                                            # enriched genes' data and assigns the gene names to each row
   enriched_genes <- enriched_genes[order(-enriched_genes$logFC),]                     # Sorts the list of enriched genes by logFC in a descending list
   return (enriched_genes)
@@ -67,28 +72,35 @@ Multi_sort <- function(input_directory, output_directory, file_name, Enriched_Ge
   for (file in 1:length(file_name)){
     setwd(input_directory)
     data3 <- read.delim(paste(file_name[file], ".txt", sep = ""), sep="\t", header=T, row.names=1)
+    write.csv(data3, paste(file_name[file], ".csv", sep = ""))
     setwd(output_directory)
     data3 <- delete_na(data3)                                                         # Removes rows of genes with NA valuesin logFC and P-value columns
     
     Official_Gene_ID <- rownames(data3)                                               # Makes a list of Gene ID's from gene list
     
-    log_FC <- data3$log2FoldChange                                                    # Makes a list of "fold count" values from gene list
+    log_FC <- 2^data3$log2FoldChange                                                  # Makes a list of "fold count" values from gene list
+    
+    log2foldchange <- data3$log2FoldChange                                            # Makes a lost of log2 fold change caluse from gene list
     
     #log_CPM <- data3$logCPM                                                          # Makes a list of "counts per million" values from gene list
     
     P_Values <- data3$pvalue                                                          # Makes a list of "P-values" from gene list
     
-    false_discovery_rate <- p.adjust(data3$pvalue, method = "fdr")                    # makes a list of "false discovery rate" values from gene list
+    #false_discovery_rate <- p.adjust(data3$pvalue, method = "fdr")                    # makes a list of "false discovery rate" values from gene list
+    
+    false_discovery_rate <- data3$padj
     
     BaseMean <- data3$baseMean                                                        # Makes a list of base mean values from gene list
     
     Stat <- data3$stat                                                                # Makes a list of stat values from gene list
     
-    ENRICHED_GENES <- Enriched_Genes(Official_Gene_ID, log_FC, P_Values, false_discovery_rate, BaseMean, Stat)
+    ENRICHED_GENES <- Enriched_Genes(Official_Gene_ID, log_FC, P_Values, false_discovery_rate, log2foldchange, BaseMean, Stat)
     
     #Writes data to a csv (excel) file. If a .txt file is needed then uncomment line 102
-    write.csv(ENRICHED_GENES, paste(file_name[file], " Enriched.csv", sep = " "), quote = FALSE)
-    #write.table(ENRICHED_GENES, paste(file_name[file], "Enriched.txt", sep = ""), quote = FALSE, sep = "\t\t")
+    
+    write.csv(ENRICHED_GENES, paste("Enriched ", file_name[file], ".csv", sep = ""), quote = FALSE)
+    
+    write.table(ENRICHED_GENES, paste("Enriched ", file_name[file], ".txt", sep = ""), quote = FALSE, sep = "\t\t")
   }
 }
 
